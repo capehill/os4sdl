@@ -32,7 +32,6 @@
 #include <proto/intuition.h>
 #include <proto/graphics.h>
 #include <proto/Picasso96API.h>
-#include <proto/utility.h>
 #include <proto/layers.h>
 
 #include <intuition/intuition.h>
@@ -54,12 +53,12 @@ static char *get_flags_str(Uint32 flags)
 
     buffer[0] = '\0';
 
-	if (flags & SDL_HWSURFACE)		SDL_strlcat(buffer, "HWSURFACE ", 256);
-	if (flags & SDL_SRCCOLORKEY)	SDL_strlcat(buffer, "SRCCOLORKEY ", 256);
-	if (flags & SDL_RLEACCELOK)		SDL_strlcat(buffer, "RLEACCELOK ", 256);
-	if (flags & SDL_RLEACCEL)		SDL_strlcat(buffer, "RLEACCEL ", 256);
-	if (flags & SDL_SRCALPHA)		SDL_strlcat(buffer, "SRCALPHA ", 256);
-	if (flags & SDL_PREALLOC)		SDL_strlcat(buffer, "PREALLOC ", 256);
+	if (flags & SDL_HWSURFACE)		SDL_strlcat(buffer, "HWSURFACE ", sizeof(buffer));
+	if (flags & SDL_SRCCOLORKEY)	SDL_strlcat(buffer, "SRCCOLORKEY ", sizeof(buffer));
+	if (flags & SDL_RLEACCELOK)		SDL_strlcat(buffer, "RLEACCELOK ", sizeof(buffer));
+	if (flags & SDL_RLEACCEL)		SDL_strlcat(buffer, "RLEACCEL ", sizeof(buffer));
+	if (flags & SDL_SRCALPHA)		SDL_strlcat(buffer, "SRCALPHA ", sizeof(buffer));
+	if (flags & SDL_PREALLOC)		SDL_strlcat(buffer, "PREALLOC ", sizeof(buffer));
 
     return buffer;
 }
@@ -104,13 +103,13 @@ int os4video_AllocHWSurface(_THIS, SDL_Surface *surface)
 			BMATags_Displayable, TRUE,
 			BMATags_Friend, friend_bitmap,
 			TAG_DONE);
-		
+
 		if (surface->hwdata->bm)
 		{
 			/* Successfully created bitmap */
 			dprintf ("Created bitmap %p\n", surface->hwdata->bm);
 
-			dprintf("BITMAP w %d, h %d, depth %d, bytes %d, bits %d\n", 
+			dprintf("BITMAP w %d, h %d, depth %d, bytes %d, bits %d\n",
 				SDL_IP96->p96GetBitMapAttr(surface->hwdata->bm, P96BMA_WIDTH),
 				SDL_IP96->p96GetBitMapAttr(surface->hwdata->bm, P96BMA_HEIGHT),
 				SDL_IP96->p96GetBitMapAttr(surface->hwdata->bm, P96BMA_DEPTH),
@@ -144,12 +143,12 @@ void os4video_FreeHWSurface(_THIS, SDL_Surface *surface)
 			dprintf("Freeing bitmap %p\n", surface->hwdata->bm);
 
 			SDL_IGraphics->FreeBitMap(surface->hwdata->bm);
-			
+
 			if (surface->hwdata->colorkey_bm)
 			{
 			    SDL_IGraphics->FreeBitMap(surface->hwdata->colorkey_bm);
 			}
-			
+
 			/*  Free surface hardware record */
 			SaveFreePooled(_this->hidden, surface->hwdata, sizeof(struct private_hwdata));
 			surface->hwdata = NULL;
@@ -169,7 +168,7 @@ int os4video_LockHWSurface(_THIS, SDL_Surface *surface)
 	{
 	    APTR base_address;
 	    uint32 bytes_per_row;
-	    
+
 		/* We're locking a surface in video memory (either a full-screen hardware display
 		 * surface or a hardware off-screen surface). We need to get P96 to lock that the
 		 * corresponding bitmap in memory so that we can access the pixels directly
@@ -179,7 +178,7 @@ int os4video_LockHWSurface(_THIS, SDL_Surface *surface)
 			LBM_BaseAddress, &base_address,
 			LBM_BytesPerRow, &bytes_per_row,
 			TAG_DONE);
-		
+
 		if (hwdata->lock)
 		{
 			/* Bitmap was successfully locked */
@@ -308,7 +307,7 @@ static void os4video_composite(struct BitMap *src_bm, struct BitMap *dst_bm,
 		//COMPTAG_DestHeight, srcrect->h,
 		COMPTAG_Flags,      flags,
 		TAG_END);
-			
+
 		if (ret_code)
 		{
 			dprintf("CompositeTags: %d\n", ret_code);
@@ -323,20 +322,18 @@ static int os4video_HWAccelBlit(SDL_Surface *src, SDL_Rect *srcrect,
 	struct BitMap   *src_bm = src->hwdata->bm;
 
 	//dprintf("src_bm %p, dst->hwdata->bm %p\n", src_bm, dst->hwdata->bm);
-	
+
 	if (src_bm)
 	{
 		if (src->flags & SDL_SRCALPHA)
 		{
 			uint32 flags = COMPFLAG_IgnoreDestAlpha | COMPFLAG_HardwareOnly;
-	
-			float surface_alpha = 1.0f;
-	
+
 			// Per-surface alpha
-			surface_alpha = src->format->alpha / 255.0f;
-			
+			float surface_alpha = src->format->alpha / 255.0f;
+
 //			dprintf("Per-surface alpha: %d\n", src->format->alpha);
-			
+
 			os4video_composite(src_bm, dst->hwdata->bm, surface_alpha,
 				src->hwdata->colorkey_bm,
 				srcrect->x, srcrect->y,
@@ -370,7 +367,7 @@ static int os4video_HWAccelBlit(SDL_Surface *src, SDL_Rect *srcrect,
 					BLITA_Width, srcrect->w,
 					BLITA_Height, srcrect->h,
 					TAG_DONE);
-			
+
 				if (error != -1)
 				{
 				    dprintf("BltBitMapTags() returned %d", error);
@@ -419,7 +416,7 @@ int os4video_CheckHWBlit(_THIS, SDL_Surface *src, SDL_Surface *dst)
 
 		dprintf("Hardware blitting not supported\n");
 	}
-	
+
 	return accelerated;
 }
 
@@ -429,7 +426,7 @@ int os4video_SetHWAlpha(_THIS, SDL_Surface *src, Uint8 value)
 	{
 		return 0;
 	}
-	
+
 	return -1;
 }
 
@@ -437,35 +434,35 @@ static void os4video_CreateAlphaMask(struct BitMap *src_bm, struct BitMap *mask_
 {
 	APTR src_base_address;
 	uint32 src_bytes_per_row;
-	
+
 	APTR src_lock = SDL_IGraphics->LockBitMapTags(
 		src_bm,
 		LBM_BaseAddress, &src_base_address,
 		LBM_BytesPerRow, &src_bytes_per_row,
 		TAG_DONE);
-		
+
 	if (src_lock)
 	{
 		APTR mask_base_address;
 		uint32 mask_bytes_per_row;
-		
+
 		APTR mask_lock = SDL_IGraphics->LockBitMapTags(
 			mask_bm,
 			LBM_BaseAddress, &mask_base_address,
 			LBM_BytesPerRow, &mask_bytes_per_row,
 			TAG_DONE);
-			
+
 		if (mask_lock)
 		{
 			Uint32 bytes_per_pixel = SDL_IGraphics->GetBitMapAttr(src_bm, BMA_BYTESPERPIXEL);
 
 			int y;
-		
+
 			for (y = 0; y < mask_bm->Rows; y++)
 			{
 				int x;
 				uint8 *mask_ptr = (uint8 *)mask_base_address + y * mask_bytes_per_row;
-		       
+
 				switch(bytes_per_pixel)
 				{
 					case 2:
@@ -473,13 +470,13 @@ static void os4video_CreateAlphaMask(struct BitMap *src_bm, struct BitMap *mask_
 						uint16 key16 = key;
 
 						uint16 *src_ptr = (uint16 *)((uint8 *)src_base_address + y * src_bytes_per_row);
-		       
+
 						for (x = 0; x < mask_bytes_per_row; x++)
 						{
 							mask_ptr[x] = (src_ptr[x] == key16) ? 0 : 0xFF;
 						}
 					} break;
-		
+
 					case 4:
 					{
 						uint32 *src_ptr = (uint32 *)((uint8 *)src_base_address + y * src_bytes_per_row);
@@ -489,20 +486,20 @@ static void os4video_CreateAlphaMask(struct BitMap *src_bm, struct BitMap *mask_
 							mask_ptr[x] = (src_ptr[x] == key) ? 0 : 0xFF;
 			    		}
 					} break;
-		
+
 					// TODO: Should we support 24-bit modes?
 					default:
 						dprintf("Unknown pixel format!\n");
 		    			break;
 				}
 			}
-		
+
 			SDL_IGraphics->UnlockBitMap(mask_lock);
 		}
-		
+
 		SDL_IGraphics->UnlockBitMap(src_lock);
 	}
-} 
+}
 
 int os4video_SetHWColorKey(_THIS, SDL_Surface *src, Uint32 key)
 {
@@ -511,7 +508,7 @@ int os4video_SetHWColorKey(_THIS, SDL_Surface *src, Uint32 key)
 		if (src->hwdata->colorkey_bm == NULL)
 		{
 			dprintf("Creating new alpha mask\n");
-			
+
 			src->hwdata->colorkey_bm = SDL_IGraphics->AllocBitMapTags(
 				src->w,
 				src->h,
@@ -616,13 +613,13 @@ static void os4video_OffscreenHook_8bit (struct Hook *hook, struct RastPort *rp,
 	/* Attempt to lock destination bitmap (screen) */
 	APTR dst_base_address;
 	uint32 dst_bytes_per_row;
-	
+
 	APTR dst_lock = SDL_IGraphics->LockBitMapTags(
 		rp->BitMap,
 		LBM_BaseAddress, &dst_base_address,
 		LBM_BytesPerRow, &dst_bytes_per_row,
 		TAG_DONE);
-		
+
 	if (dst_lock)
 	{
 		uint32 dst;
@@ -745,7 +742,7 @@ void os4video_UpdateRectsOffscreen(_THIS, int numrects, SDL_Rect *rects)
 {
 	struct SDL_PrivateVideoData *hidden = _this->hidden;
 	struct Window               *w      = hidden->win;
-	
+
 	/* We don't want our window changing size while we're doing this */
 	SDL_ILayers->LockLayer(0, w->WLayer);
 
@@ -754,7 +751,7 @@ void os4video_UpdateRectsOffscreen(_THIS, int numrects, SDL_Rect *rects)
 		const struct IBox windowBox = {
 			w->BorderLeft, w->BorderTop, w->Width, w->Height
 		};
-		
+
 		const SDL_Rect *r = &rects[0];
 
 		for ( ; numrects > 0; r++, numrects--)

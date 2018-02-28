@@ -289,7 +289,7 @@ SDL_VideoDevice *os4video_CreateDevice(int devnum)
 	}
 
 	os4video_device->hidden = (struct SDL_PrivateVideoData *)IExec->AllocVecTags(sizeof(struct SDL_PrivateVideoData), AVT_ClearWithValue, 0, AVT_Type, MEMF_SHARED, TAG_DONE );
-	if (!os4video_device)
+	if (!os4video_device->hidden)
 	{
 		SDL_OutOfMemory();
 		dprintf("No memory for private data\n");
@@ -358,9 +358,9 @@ SDL_VideoDevice *os4video_CreateDevice(int devnum)
     os4video_device->PumpEvents = os4video_PumpEvents;
 	os4video_device->CreateWMCursor = os4video_CreateWMCursor;
 	os4video_device->ShowWMCursor = os4video_ShowWMCursor;
-	
+
 	os4video_device->GetWMInfo = os4video_GetWMInfo;
-	
+
 	os4video_device->FreeWMCursor = os4video_FreeWMCursor;
 	os4video_device->WarpWMCursor = os4video_WarpWMCursor;
 	os4video_device->UpdateMouse = os4video_UpdateMouse;
@@ -368,7 +368,7 @@ SDL_VideoDevice *os4video_CreateDevice(int devnum)
 	os4video_device->ToggleFullScreen = os4video_ToggleFullScreen;
 	os4video_device->SetHWAlpha = os4video_SetHWAlpha;
 	os4video_device->SetHWColorKey = os4video_SetHWColorKey;
-	
+
 #if SDL_VIDEO_OPENGL
 	os4video_device->GL_LoadLibrary = os4video_GL_LoadLibrary;
 	os4video_device->GL_GetProcAddress = os4video_GL_GetProcAddress;
@@ -438,7 +438,7 @@ os4video_VideoInit(_THIS, SDL_PixelFormat *vformat)
 	_this->info.blit_fill    = 1;
 	_this->info.blit_hw_A    = hidden->haveCompositing ? 1 : 0;
 	_this->info.blit_hw_CC   = hidden->haveCompositing ? 1 : 0;
-    
+
 	/* Get Video Mem */
 	SDL_IP96->p96GetBoardDataTags(0, P96BD_FreeMemory, &freeMem);
 	_this->info.video_mem = freeMem;
@@ -847,7 +847,7 @@ initOffScreenBuffer(struct OffScreenBuffer *offBuffer, uint32 width, uint32 heig
 	BOOL     success     = FALSE;
 	PIX_FMT  pixelFormat = os4video_PFtoPIXF(format);
 	uint32   bpp         = os4video_PIXF2Bits(pixelFormat);
-	
+
 	/* Round up width/height to nearest 4 pixels */
 	width  = (width + 3) & (~3);
 	height = (height + 3) & (~3);
@@ -863,7 +863,7 @@ initOffScreenBuffer(struct OffScreenBuffer *offBuffer, uint32 width, uint32 heig
 		BMATags_UserPrivate, TRUE,
 		BMATags_PixelFormat, pixelFormat,
 		TAG_DONE);
-		
+
 	if (offBuffer->bitmap != NULL)
 	{
 		offBuffer->width  =  width;
@@ -874,7 +874,7 @@ initOffScreenBuffer(struct OffScreenBuffer *offBuffer, uint32 width, uint32 heig
 	    offBuffer->pitch  =         SDL_IP96->p96GetBitMapAttr(offBuffer->bitmap, P96BMA_BYTESPERROW);
 
 		dprintf("pixels %d, pitch %d\n", offBuffer->pixels, offBuffer->pitch);
-		
+
 		success = TRUE;
 	}
 	else
@@ -1330,15 +1330,15 @@ static char *get_flags_str(Uint32 flags)
 
     buffer[0] = '\0';
 
-	if  (flags & SDL_ANYFORMAT)						SDL_strlcat(buffer, "ANYFORMAT ", 256);
-	if  (flags & SDL_HWSURFACE)						SDL_strlcat(buffer, "HWSURFACE ", 256);
-	if  (flags & SDL_HWPALETTE)						SDL_strlcat(buffer, "HWPALETTE ", 256);
-	if  (flags & SDL_DOUBLEBUF)						SDL_strlcat(buffer, "DOUBLEFUF ", 256);
-	if  (flags & SDL_FULLSCREEN)					SDL_strlcat(buffer, "FULLSCREEN ", 256);
-	if  (flags & SDL_OPENGL)						SDL_strlcat(buffer, "OPENGL ", 256);
-	if ((flags & SDL_OPENGLBLIT) == SDL_OPENGLBLIT)	SDL_strlcat(buffer, "OPENGLBLIT ", 256);
-	if  (flags & SDL_RESIZABLE)						SDL_strlcat(buffer, "RESIZEABLE ", 256);
-	if  (flags & SDL_NOFRAME)						SDL_strlcat(buffer, "NOFRAME ", 256);
+	if (flags & SDL_ANYFORMAT)					   SDL_strlcat(buffer, "ANYFORMAT ", sizeof(buffer));
+	if (flags & SDL_HWSURFACE)					   SDL_strlcat(buffer, "HWSURFACE ", sizeof(buffer));
+	if (flags & SDL_HWPALETTE)					   SDL_strlcat(buffer, "HWPALETTE ", sizeof(buffer));
+	if (flags & SDL_DOUBLEBUF)					   SDL_strlcat(buffer, "DOUBLEFUF ", sizeof(buffer));
+	if (flags & SDL_FULLSCREEN)					   SDL_strlcat(buffer, "FULLSCREEN ", sizeof(buffer));
+	if (flags & SDL_OPENGL)						   SDL_strlcat(buffer, "OPENGL ", sizeof(buffer));
+	if ((flags & SDL_OPENGLBLIT) == SDL_OPENGLBLIT)	SDL_strlcat(buffer, "OPENGLBLIT ", sizeof(buffer));
+	if (flags & SDL_RESIZABLE)					   SDL_strlcat(buffer, "RESIZEABLE ", sizeof(buffer));
+	if (flags & SDL_NOFRAME)					   SDL_strlcat(buffer, "NOFRAME ", sizeof(buffer));
 
     return buffer;
 }
@@ -1347,13 +1347,13 @@ static char *get_flags_str(Uint32 flags)
 static SDL_bool os4video_AllocateOpenGLBuffers(_THIS, int width, int height)
 {
 	struct SDL_PrivateVideoData *hidden = _this->hidden;
-	
+
 	if (hidden->m_frontBuffer)
 	{
 		SDL_IGraphics->FreeBitMap(hidden->m_frontBuffer);
 		hidden->m_frontBuffer = NULL;
 	}
-	
+
 	if (hidden->m_backBuffer)
 	{
 		SDL_IGraphics->FreeBitMap(hidden->m_backBuffer);
@@ -1386,14 +1386,14 @@ static SDL_bool os4video_AllocateOpenGLBuffers(_THIS, int width, int height)
 		SDL_Quit();
 		return SDL_FALSE;
 	}
-	
+
 	hidden->IGL->MGLUpdateContextTags(
 					MGLCC_FrontBuffer,hidden->m_frontBuffer,
 					MGLCC_BackBuffer,hidden->m_backBuffer,
 					TAG_DONE);
 
 	hidden->IGL->GLViewport(0,0,width,height);
-	
+
 	return SDL_TRUE;
 }
 

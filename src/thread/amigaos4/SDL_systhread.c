@@ -21,7 +21,7 @@
 */
 #include "SDL_config.h"
 
-//#define DEBUG
+#define DEBUG
 #include "../../main/amigaos4/SDL_os4debug.h"
 
 /* Thread management routines for SDL */
@@ -34,13 +34,9 @@
 #include "../../main/amigaos4/SDL_os4timer_c.h"
 
 #include <proto/exec.h>
-#include <proto/utility.h>
 #include <proto/dos.h>
-#include <proto/timer.h>
 
 #include <exec/tasks.h>
-#include <exec/ports.h>
-#include <devices/timer.h>
 
 static struct PList currentThreads;
 static struct PList currentJoins;
@@ -61,12 +57,11 @@ struct JoinNode
 	struct Task *sigTask;
 };
 
-
 static void plistInit(struct PList *list)
 {
 	if (list)
 	{
-		list->sem = IExec->AllocSysObject(ASOT_SEMAPHORE, 0);
+		list->sem = IExec->AllocSysObject(ASOT_SEMAPHORE, NULL);
 		IExec->NewList(&list->list);
 	}
 }
@@ -123,9 +118,9 @@ static int plistIsListEmpty(struct PList *list)
 	IExec->ObtainSemaphoreShared(list->sem);
 
 	if (IsListEmpty(&list->list))
+	{
 		empty = 1;
-	else
-		empty = 0;
+	}
 
 	IExec->ReleaseSemaphore(list->sem);
 
@@ -144,9 +139,9 @@ static inline __attribute__((always_inline)) void set_r2(uint32 r2)
 	__asm volatile ("mr 2, %0" :: "r" (r2));
 }
 
-void os4thread_init(void)
+void os4thread_initialize(void)
 {
-	struct Process *me = (struct Process *)IExec->FindTask(0);
+	struct Process *me = (struct Process *)IExec->FindTask(NULL);
 
 	plistInit(&currentThreads);
 	plistInit(&currentJoins);
@@ -161,13 +156,12 @@ void os4thread_init(void)
 	dprintf("Primary thread is %p\n", me);
 }
 
-int kill_thread(struct ThreadNode *node, struct ThreadNode *ref)
+static int kill_thread(struct ThreadNode *node, struct ThreadNode *ref)
 {
 	SDL_SYS_KillThread(node->thread);
 
 	return 0;
 }
-
 
 void os4thread_quit(void)
 {
@@ -314,21 +308,16 @@ int SDL_SYS_CreateThread(SDL_Thread *thread, void *args)
 
 void SDL_SYS_SetupThread(void)
 {
-
 }
 
 Uint32 SDL_ThreadID(void)
 {
-	return (Uint32)IExec->FindTask(0);
+	return (Uint32)IExec->FindTask(NULL);
 }
-
 
 static int threadCmp(struct ThreadNode *node, struct ThreadNode *ref)
 {
-	if (node->thread == ref->thread)
-		return 1;
-	else
-		return 0;
+	return (node->thread == ref->thread) ? 1 : 0;
 }
 
 void SDL_SYS_WaitThread(SDL_Thread *thread)
@@ -339,7 +328,7 @@ void SDL_SYS_WaitThread(SDL_Thread *thread)
 
 	/* Build reference and join nodes */
 	ref.thread = thread;
-	join.sigTask = IExec->FindTask(0);
+	join.sigTask = IExec->FindTask(NULL);
 
 	dprintf("Waiting on %p to terminate\n", thread);
 
@@ -361,7 +350,7 @@ void SDL_SYS_WaitThread(SDL_Thread *thread)
 		dprintf("Some thread has exited\n");
 	}
 
-	dprintf("child exited\n");
+	dprintf("Child exited\n");
 }
 
 void SDL_SYS_KillThread(SDL_Thread *thread)
@@ -370,15 +359,16 @@ void SDL_SYS_KillThread(SDL_Thread *thread)
 	char buffer[128];
 
 	/* Create the name to look for, and search the task */
-	SDL_snprintf(buffer, 128, "SDL thread %p", thread);
+	SDL_snprintf(buffer, sizeof(buffer), "SDL thread %p", thread);
 
 	IExec->Forbid();
 
 	child = (struct Process *)IExec->FindTask(buffer);
 
 	if (child)
+	{
 		IExec->Signal((struct Task *)child, SIGBREAKF_CTRL_C);
+	}
 
 	IExec->Permit();
-	return;
 }
