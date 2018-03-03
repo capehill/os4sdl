@@ -153,7 +153,7 @@ int SDL_InitSubSystem(Uint32 flags)
 
 #ifdef __amigaos4__
 
-#define DEBUG
+//#define DEBUG
 #include "main/amigaos4/SDL_os4debug.h"
 
 void os4thread_initialize(void);

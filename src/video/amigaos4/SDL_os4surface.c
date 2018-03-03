@@ -37,8 +37,7 @@
 #include <intuition/intuition.h>
 #include <libraries/Picasso96.h>
 
-#define DEBUG
-
+//#define DEBUG
 #include "../../main/amigaos4/SDL_os4debug.h"
 
 extern struct GraphicsIFace  *SDL_IGraphics;
