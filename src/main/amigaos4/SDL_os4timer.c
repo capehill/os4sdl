@@ -41,7 +41,7 @@
 
 #include "SDL_os4timer_c.h"
 
-#define DEBUG
+//#define DEBUG
 #include "SDL_os4debug.h"
 
 /*

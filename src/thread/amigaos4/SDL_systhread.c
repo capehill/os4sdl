@@ -21,7 +21,7 @@
 */
 #include "SDL_config.h"
 
-#define DEBUG
+//#define DEBUG
 #include "../../main/amigaos4/SDL_os4debug.h"
 
 /* Thread management routines for SDL */
