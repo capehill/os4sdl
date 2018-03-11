@@ -31,7 +31,6 @@
  */
 
 #include "SDL_config.h"
-
 #include "SDL_types.h"
 
 #include <proto/exec.h>
@@ -63,12 +62,12 @@ void os4timer_initialize(void)
 
 	struct Library *timer = (struct Library *)IExec->FindName(&sysbase->DeviceList, TIMERNAME);
 
-	dprintf("timer = %p\n", timer);
+	dprintf("timer=%p\n", timer);
 
 	if (timer) {
 		ITimer = (struct TimerIFace *)IExec->GetInterface(timer, "main", 1, NULL);
 
-		dprintf("ITimer = %p\n", ITimer);
+		dprintf("ITimer=%p\n", ITimer);
 
 		if (ITimer)
 		{
@@ -116,7 +115,7 @@ BOOL os4timer_Init(os4timer_Instance *timer)
 {
 	BOOL success = FALSE;
 
-	dprintf("Initializing timer for thread %p\n", IExec->FindTask(NULL));
+	dprintf("Initializing timer for process %p\n", IExec->FindTask(NULL));
 
 	timer->timerport = IExec->AllocSysObject(ASOT_PORT, NULL);
 
@@ -156,7 +155,7 @@ BOOL os4timer_Init(os4timer_Instance *timer)
  */
 void os4timer_Destroy(os4timer_Instance *timer)
 {
-	dprintf("Freeing timer for thread %p\n", IExec->FindTask(NULL));
+	dprintf("Freeing timer for process %p\n", IExec->FindTask(NULL));
 
 	if (timer->timerrequest)
 	{
@@ -206,7 +205,6 @@ BOOL os4timer_SetAlarm(os4timer_Instance *timer, Uint32 alarmTicks, ULONG *alarm
 
 	IExec->SetSignal(0, 1L << timer->timerport->mp_SigBit);
 
-	/* Send the request. */
 	IExec->SendIO((struct IORequest *)timer->timerrequest);
 
 	/* Return alarm signal to caller. */
